@@ -1,0 +1,133 @@
+//assign company delete
+		$(document).on('click', '.delete_company', function () {
+			var id = $(this).attr("id");
+			//alert(id);
+			if (confirm("Are you sure you want to remove this data?")) {
+				var action = "Delete";
+				$.ajax({
+					url: "company_assign_action.php",
+					method: "POST",
+					data: { user_company_id: id, action_company: action },
+					success: function (data) {
+						fetchCompany();
+						$('#alert_company_action').html(data);
+						setTimeout(() => {
+							$('#alert_company_action').html('');
+						}, 1500);
+					}
+				})
+			}
+			else {
+				return false;
+			}
+		});
+
+			//assign company update
+			$(document).on('click', '.update_company', function () {
+			var id = $(this).attr("id");
+			$('#action_company').val("Edit");
+			$('#btn_action_company').val("Edit");
+			$.ajax({
+				url: "company_assign_fetch.php",
+				method: "POST",
+				data: { user_company_id: id },
+				dataType: "json",
+				success: function (data) {
+					$('#company_name').val(data.company_id);
+					$('#recruited_date').val(data.recruited_date);
+					$('#user_company_id').val(data.user_company_id);
+					$('#work_role').val(data.work_role);
+					$('#Contract_Period').val(data.contract_period);
+				}
+			})
+		});
+
+		
+
+
+		$(document).on('click', '.company', function () {
+			userid = $(this).attr("id");
+			fetchCompany();
+		});
+
+
+
+
+		///////////////////////////////////////
+
+		if ($_POST['btn_action'] == 'fetch_single') {
+  $query     = "SELECT * FROM out_source_company WHERE company_id = :company_id";
+  $statement = $connect->prepare($query);
+  $statement->execute(
+   array(
+    ':company_id' => $_POST["company_id"],
+
+   )
+  );
+  $result = $statement->fetchAll();
+  foreach ($result as $row) {
+   $output['company_name']   = $row['company_name'];
+   $output['contact_number'] = $row['contact_number'];
+   $output['email']          = $row['email'];
+   $output['address']        = $row['address'];
+  }
+  echo json_encode($output);
+ }
+
+ if ($_POST['btn_action'] == 'Edit') {
+  $company_name = trim($_POST["company_name"]);
+  if (ifNotexistsLock($connect, "out_source_company", "company_name", $_POST["company_name"], "company_id", $_POST["company_id"])) {
+   if (ifNotexistsLock($connect, "out_source_company", "email", $_POST["email"], "company_id", $_POST["company_id"])) {
+    $query = "
+					UPDATE out_source_company set
+					company_name = TRIM(:company_name),
+					contact_number =TRIM(:contact_number),
+					email =TRIM(:email),
+					address=TRIM(:address)
+					WHERE company_id = :company_id
+					";
+    execute_query("Company Details Edited", "Unable to edit Company Details", $connect, $query, array(
+     ':company_id'     => $_POST["company_id"],
+     ':company_name'   => $_POST["company_name"],
+     ':contact_number' => $_POST["contact_number"],
+     ':email'          => $_POST["email"],
+     ':address'        => $_POST["address"],
+    ));
+   } else {
+    echo json_encode(printJsonMsg("Company Email Address Already exist", 'err'));
+   }
+  } else {
+   echo json_encode(printJsonMsg("Company Name Already exist", 'err'));
+  }
+
+ }
+ if ($_POST['btn_action'] == 'delete') {
+  $status = 'Active';
+  if ($_POST['status'] == 'Active') {
+   //$status = 'Inactive';
+   $sql = "SELECT count(user_company.user_company_id) as userCompanyCount FROM out_source_company
+   INNER JOIN user_company ON user_company.company_id=out_source_company.company_id
+   WHERE out_source_company.company_id=:company_id AND out_source_company.company_status='Active'";
+   $statement = $connect->prepare($sql);
+   $statement->execute(
+    array(
+     ':company_id' => $_POST["company_id"]
+    )
+   );
+   $result = $statement->fetch(PDO::FETCH_ASSOC);
+
+   if ($result["userCompanyCount"] <= 0) {
+    $status = 'Inactive';
+   }
+  }
+
+  $query = "
+		UPDATE out_source_company
+		SET company_status = :company_status
+		WHERE company_id = :company_id
+		";
+  execute_query("Company Details Changed", "Unable to Change Company Details", $connect, $query, array(
+   ':company_status' => $status,
+   ':company_id'     => $_POST["company_id"]
+  ));
+ }

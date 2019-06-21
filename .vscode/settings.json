@@ -1,0 +1,5 @@
+{
+    "phpfmt.detect_indent": true,
+    "phpfmt.enable_auto_align": true,
+    "phpfmt.php_bin": "C:\\wamp64\\bin\\php\\php7.2.14\\php.exe"
+}
